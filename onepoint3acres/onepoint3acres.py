@@ -92,7 +92,8 @@ class OnePointThreeAcres:
         expected = questions[question]
         answer_id = 0
         for k, v in answers.items():
-            if v in expected:
+            match = v in expected if isinstance(expected, list) else expected in v
+            if match:
                 answer_id = k
                 break
 

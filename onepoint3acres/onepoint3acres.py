@@ -9,6 +9,7 @@ import traceback
 import requests
 from dotenv import load_dotenv
 from twocaptcha import TwoCaptcha
+from twocaptcha.exceptions import NetworkException, TimeoutException
 
 from notify.email import info, send_error_mail
 
@@ -105,12 +106,29 @@ class OnePointThreeAcres:
 
         return question_id, answer_id
 
-    def answer_daily_question(self, question: int, answer: int) -> None:
-        result = self.solver.turnstile(
-            sitekey=self.cf_capcha_site_key,
-            url=self.question_page,
-            useragent=self.user_agent,
+    def _solve_turnstile(self, attempts: int = 3):
+        # Turnstile can be slow on 2Captcha; bump timeout and retry on transient failures.
+        last_err: Exception | None = None
+        for i in range(1, attempts + 1):
+            try:
+                return self.solver.turnstile(
+                    sitekey=self.cf_capcha_site_key,
+                    url=self.question_page,
+                    useragent=self.user_agent,
+                    timeout=300,
+                    pollingInterval=5,
+                )
+            except (TimeoutException, NetworkException) as e:
+                last_err = e
+                info(f"Turnstile solve attempt {i}/{attempts} failed: {e}")
+                time.sleep(random.uniform(3, 10))
+        raise RuntimeError(
+            f"2Captcha Turnstile solve failed after {attempts} attempts: "
+            f"{type(last_err).__name__}: {last_err}"
         )
+
+    def answer_daily_question(self, question: int, answer: int) -> None:
+        result = self._solve_turnstile()
         code = result["code"]
         captcha_id = result["captchaId"]
 

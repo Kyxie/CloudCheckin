@@ -8,8 +8,7 @@ import traceback
 
 import requests
 from dotenv import load_dotenv
-from twocaptcha import TwoCaptcha
-from twocaptcha.exceptions import NetworkException, TimeoutException
+from twocaptcha import NetworkException, TimeoutException, TwoCaptcha
 
 from notify.email import info, send_error_mail
 

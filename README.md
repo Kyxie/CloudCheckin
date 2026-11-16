@@ -47,6 +47,12 @@ args: ["-m", "nodeseek.nodeseek"]
 docker build -t cloudcheckin:latest .
 ```
 
+## Publishing
+
+After committing changes, run `just release` for a patch release, `just minor` for a minor release, or `just major` for a major release. The release command checks the local Git identity and branch, then pushes the commit and version tag together. A version tag triggers GitHub Actions to publish `ghcr.io/kyxie/cloudcheckin:latest` and `ghcr.io/kyxie/cloudcheckin:<version>` for `linux/amd64` and `linux/arm64`.
+
+The workflow uses `GITHUB_TOKEN` to publish to GHCR; Docker Hub credentials are not needed. Make the GHCR package public if the k3s cluster pulls without registry credentials. Otherwise, configure a pull secret with a token that has `read:packages` access.
+
 镜像 `ENTRYPOINT` 是 `python`，入口模块由调用方通过 `args` 提供：
 
 | 平台 | 入口 |
@@ -98,7 +104,7 @@ docker run --rm --env-file .env cloudcheckin:latest -m nodeseek.nodeseek
 本仓库不包含 k8s 清单。在你的 Flux 仓库中：
 
 1. 用 sops 加密包含上述环境变量的 `Secret`，由 Flux/SOPS controller 解密。
-2. 为每个平台创建 `CronJob`，`image` 指向你构建并推送的 `cloudcheckin` 镜像，`args` 指向对应入口模块，`envFrom` 引用上一步的 `Secret`。
+2. 为每个平台创建 `CronJob`，`image` 指向 `ghcr.io/kyxie/cloudcheckin:latest`，`args` 指向对应入口模块，`envFrom` 引用上一步的 `Secret`。
 3. `restartPolicy: OnFailure`，`successfulJobsHistoryLimit` / `failedJobsHistoryLimit` 按需调整。
 
 ## 常见问题

@@ -47,6 +47,12 @@ args: ["-m", "nodeseek.nodeseek"]
 docker build -t cloudcheckin:latest .
 ```
 
+## Publishing
+
+After committing changes, run `just release` for a patch release, `just minor` for a minor release, or `just major` for a major release. The release command checks the local Git identity and branch, then pushes the commit and version tag together. A version tag triggers GitHub Actions to publish `ghcr.io/kyxie/cloudcheckin:latest` and `ghcr.io/kyxie/cloudcheckin:<version>` for `linux/amd64` and `linux/arm64`.
+
+The workflow uses `GITHUB_TOKEN` to publish to GHCR; Docker Hub credentials are not needed. Make the GHCR package public if the k3s cluster pulls without registry credentials. Otherwise, configure a pull secret with a token that has `read:packages` access.
+
 The image `ENTRYPOINT` is `python`; the entry module is supplied by the caller via `args`:
 
 | Platform      | Entry point                               |
@@ -98,7 +104,7 @@ docker run --rm --env-file .env cloudcheckin:latest -m nodeseek.nodeseek
 This repository does not include Kubernetes manifests. In your Flux repository:
 
 1. Encrypt a `Secret` containing the environment variables above using sops; let the Flux/SOPS controller decrypt it at runtime.
-2. Create a `CronJob` for each platform, pointing `image` at your built `cloudcheckin` image, setting `args` to the corresponding entry module, and referencing the `Secret` via `envFrom`.
+2. Create a `CronJob` for each platform, pointing `image` at `ghcr.io/kyxie/cloudcheckin:latest`, setting `args` to the corresponding entry module, and referencing the `Secret` via `envFrom`.
 3. Set `restartPolicy: OnFailure`; tune `successfulJobsHistoryLimit` and `failedJobsHistoryLimit` as needed.
 
 ## FAQ
